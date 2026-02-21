@@ -1,0 +1,5 @@
+{
+  "name": "EduReg: Secure Academic Registration System",
+  "description": "A professional course registration platform featuring automated prerequisite validation, academic policy enforcement, and secure student data management.",
+  "requestFramePermissions": []
+}

@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/students/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isCoordinator() {
+      return isSignedIn() && get(/databases/$(database)/documents/students/$(request.auth.uid)).data.role == 'coordinator';
+    }
+
+    // Students collection
+    match /students/{studentId} {
+      // Allow creation during signup
+      allow create: if isSignedIn() && isOwner(studentId);
+      
+      // Allow users to read/update their own profile
+      // Allow admins to read/update all profiles
+      allow read: if isSignedIn() && (isOwner(studentId) || isAdmin() || isCoordinator());
+      allow update: if isSignedIn() && (isOwner(studentId) || isAdmin());
+      
+      // Allow admins to list students (for approval)
+      allow list: if isAdmin();
+    }
+
+    // Courses are public for reading
+    match /courses/{courseId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin(); 
+    }
+
+    // Registration records
+    match /registrations/{regId} {
+      allow read: if isSignedIn() && (
+        resource.data.studentId == request.auth.uid || isAdmin() || isCoordinator()
+      );
+      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+      allow update: if isAdmin() || isCoordinator();
+      allow list: if isAdmin() || isCoordinator();
+    }
+  }
+}
