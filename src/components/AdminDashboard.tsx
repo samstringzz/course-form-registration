@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { dbService } from '../dbService';
 import { RegistrationRecord, Student, RegistrationStatus, Course } from '../types';
-import { Check, X, Clock, User, Book, ShieldCheck, Users, ClipboardCheck, Plus, Eye } from 'lucide-react';
+import { Check, X, Clock, User, Book, ShieldCheck, Users, ClipboardCheck, Plus, Eye, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 
@@ -12,8 +12,71 @@ export const AdminDashboard: React.FC<{ userRole: string }> = ({ userRole }) => 
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'registrations' | 'users' | 'courses'>(userRole === 'admin' ? 'users' : 'registrations');
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [isAddingCourse, setIsAddingCourse] = useState(false);
   const [selectedRegForDetails, setSelectedRegForDetails] = useState<RegistrationRecord | null>(null);
   const [newPrereqs, setNewPrereqs] = useState<string>('');
+  const [newCourse, setNewCourse] = useState<Omit<Course, 'id'>>({
+    code: '',
+    title: '',
+    description: '',
+    credits: 3,
+    level: '100',
+    type: 'core',
+    instructor: 'TBA',
+    schedule: {
+      days: ['M', 'W'],
+      startTime: '09:00',
+      endTime: '11:00'
+    },
+    prerequisites: [],
+    semester: 'First',
+    enrolled: 0,
+    capacity: 100
+  });
+
+  const handleAddCourse = async () => {
+    try {
+      if (!newCourse.code || !newCourse.title) {
+        toast.error("Code and Title are required");
+        return;
+      }
+      await dbService.addCourse(newCourse);
+      toast.success("Course added successfully");
+      setIsAddingCourse(false);
+      setNewCourse({
+        code: '',
+        title: '',
+        description: '',
+        credits: 3,
+        level: '100',
+        type: 'core',
+        instructor: 'TBA',
+        schedule: {
+          days: ['M', 'W'],
+          startTime: '09:00',
+          endTime: '11:00'
+        },
+        prerequisites: [],
+        semester: 'First',
+        enrolled: 0,
+        capacity: 100
+      });
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to add course");
+    }
+  };
+
+  const handleDeleteCourse = async (courseId: string) => {
+    if (!window.confirm("Are you sure you want to delete this course? This action cannot be undone.")) return;
+    try {
+      await dbService.deleteCourse(courseId);
+      toast.success("Course deleted successfully");
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to delete course");
+    }
+  };
 
   const handleUpdatePrereqs = async () => {
     if (!editingCourse) return;
@@ -157,7 +220,10 @@ export const AdminDashboard: React.FC<{ userRole: string }> = ({ userRole }) => 
         <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
             <h3 className="font-bold text-slate-900">Manage Course Catalog</h3>
-            <button className="bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-brand-700 transition-all flex items-center gap-2">
+            <button 
+              onClick={() => setIsAddingCourse(true)}
+              className="bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-brand-700 transition-all flex items-center gap-2"
+            >
               <Plus size={14} /> Add New Course
             </button>
           </div>
@@ -194,15 +260,24 @@ export const AdminDashboard: React.FC<{ userRole: string }> = ({ userRole }) => 
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button 
-                        onClick={() => {
-                          setEditingCourse(course);
-                          setNewPrereqs(course.prerequisites.join(', '));
-                        }}
-                        className="text-brand-600 hover:text-brand-700 text-xs font-bold underline underline-offset-4"
-                      >
-                        Edit
-                      </button>
+                      <div className="flex items-center justify-end gap-3">
+                        <button 
+                          onClick={() => {
+                            setEditingCourse(course);
+                            setNewPrereqs(course.prerequisites.join(', '));
+                          }}
+                          className="text-brand-600 hover:text-brand-700 text-xs font-bold underline underline-offset-4"
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteCourse(course.id)}
+                          className="text-red-500 hover:text-red-700 p-1 rounded-lg hover:bg-red-50 transition-colors"
+                          title="Delete Course"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -314,6 +389,119 @@ export const AdminDashboard: React.FC<{ userRole: string }> = ({ userRole }) => 
                   className="flex-1 py-3 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 shadow-lg shadow-brand-100 transition-all"
                 >
                   Save Changes
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Course Modal */}
+      <AnimatePresence>
+        {isAddingCourse && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAddingCourse(false)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl p-8 space-y-6 max-h-[90vh] overflow-y-auto"
+            >
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">Add New Course</h3>
+                <p className="text-sm text-slate-500">Enter course details to add to catalog</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-slate-400">Course Code</label>
+                  <input 
+                    type="text"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500"
+                    value={newCourse.code}
+                    onChange={(e) => setNewCourse({...newCourse, code: e.target.value.toUpperCase()})}
+                    placeholder="e.g. CS101"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-slate-400">Credits</label>
+                  <input 
+                    type="number"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500"
+                    value={newCourse.credits}
+                    onChange={(e) => setNewCourse({...newCourse, credits: parseInt(e.target.value)})}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-slate-400">Course Title</label>
+                <input 
+                  type="text"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500"
+                  value={newCourse.title}
+                  onChange={(e) => setNewCourse({...newCourse, title: e.target.value})}
+                  placeholder="e.g. Introduction to Computer Science"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-slate-400">Level</label>
+                  <select 
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500"
+                    value={newCourse.level}
+                    onChange={(e) => setNewCourse({...newCourse, level: e.target.value})}
+                  >
+                    <option value="100">100 Level</option>
+                    <option value="200">200 Level</option>
+                    <option value="300">300 Level</option>
+                    <option value="400">400 Level</option>
+                    <option value="500">500 Level</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-slate-400">Type</label>
+                  <select 
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500"
+                    value={newCourse.type}
+                    onChange={(e) => setNewCourse({...newCourse, type: e.target.value as any})}
+                  >
+                    <option value="core">Core</option>
+                    <option value="elective">Elective</option>
+                    <option value="general">General</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-slate-400">Capacity</label>
+                <input 
+                  type="number"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500"
+                  value={newCourse.capacity}
+                  onChange={(e) => setNewCourse({...newCourse, capacity: parseInt(e.target.value)})}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button 
+                  onClick={() => setIsAddingCourse(false)}
+                  className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleAddCourse}
+                  className="flex-1 py-3 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 shadow-lg shadow-brand-100 transition-all"
+                >
+                  Create Course
                 </button>
               </div>
             </motion.div>

@@ -475,7 +475,13 @@ export const RegistrationView: React.FC<RegistrationViewProps> = ({ student, cou
                     </td>
                     <td className="px-6 py-4 font-bold text-slate-900 text-sm">{course.credits}</td>
                     <td className="px-6 py-4 text-xs text-slate-500">
-                      {course.schedule.days.join('')} • {course.schedule.startTime}
+                      {course.schedule?.days ? (
+                        <>
+                          {course.schedule.days.join('')} • {course.schedule.startTime}
+                        </>
+                      ) : (
+                        'No schedule set'
+                      )}
                     </td>
                   </tr>
                 );

@@ -40,15 +40,17 @@ export const validateRegistration = (
       const c1 = selectedCourses[i];
       const c2 = selectedCourses[j];
       
-      const daysOverlap = c1.schedule.days.some((day) => c2.schedule.days.includes(day));
-      if (daysOverlap) {
-        const start1 = c1.schedule.startTime;
-        const end1 = c1.schedule.endTime;
-        const start2 = c2.schedule.startTime;
-        const end2 = c2.schedule.endTime;
+      if (c1.schedule?.days && c2.schedule?.days) {
+        const daysOverlap = c1.schedule.days.some((day) => c2.schedule.days.includes(day));
+        if (daysOverlap) {
+          const start1 = c1.schedule.startTime;
+          const end1 = c1.schedule.endTime;
+          const start2 = c2.schedule.startTime;
+          const end2 = c2.schedule.endTime;
 
-        if (start1 < end2 && start2 < end1) {
-          errors.push(`Schedule conflict between ${c1.code} and ${c2.code}.`);
+          if (start1 < end2 && start2 < end1) {
+            errors.push(`Schedule conflict between ${c1.code} and ${c2.code}.`);
+          }
         }
       }
     }

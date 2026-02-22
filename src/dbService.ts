@@ -8,6 +8,7 @@ import {
   query, 
   where,
   addDoc,
+  deleteDoc,
   serverTimestamp,
   increment
 } from 'firebase/firestore';
@@ -54,6 +55,15 @@ export const dbService = {
   async updateCoursePrereqs(courseId: string, prereqs: string[]) {
     const courseRef = doc(db, 'courses', courseId);
     await updateDoc(courseRef, { prerequisites: prereqs });
+  },
+
+  async addCourse(course: Omit<Course, 'id'>) {
+    return await addDoc(collection(db, 'courses'), course);
+  },
+
+  async deleteCourse(courseId: string) {
+    const courseRef = doc(db, 'courses', courseId);
+    await deleteDoc(courseRef);
   },
 
   // Registrations

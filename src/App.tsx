@@ -51,13 +51,14 @@ export default function App() {
       if (user) {
         const studentData = await dbService.getStudent(user.uid);
         setStudent(studentData);
+        // Load courses only after auth
+        loadCourses();
       } else {
         setStudent(null);
       }
       setLoading(false);
     });
 
-    // Load real courses
     const loadCourses = async () => {
       try {
         const realCourses = await dbService.getCourses();
@@ -67,7 +68,6 @@ export default function App() {
         toast.error("Failed to load course catalog");
       }
     };
-    loadCourses();
 
     return () => unsubscribe();
   }, []);
