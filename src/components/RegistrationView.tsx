@@ -58,7 +58,6 @@ export const RegistrationView: React.FC<RegistrationViewProps> = ({ student, cou
     const toastId = toast.loading("Generating PDF Course Form...");
     
     try {
-      // Ensure images and fonts are loaded
       await document.fonts.ready;
       
       const canvas = await html2canvas(formRef.current, {
@@ -67,100 +66,94 @@ export const RegistrationView: React.FC<RegistrationViewProps> = ({ student, cou
         allowTaint: true,
         logging: false,
         backgroundColor: '#ffffff',
-        windowWidth: formRef.current.scrollWidth,
-        windowHeight: formRef.current.scrollHeight,
         onclone: (clonedDoc) => {
           const el = clonedDoc.getElementById('course-form-print');
-          if (el) {
-            el.style.height = 'auto';
-            el.style.width = '800px';
-            
-            // Fix for html2canvas not supporting modern color functions (oklch, oklab)
-            // We traverse all elements in the clone and convert their computed colors (which the browser
-            // resolves to rgb/rgba) into inline styles that html2canvas can safely parse.
-            const allElements = el.getElementsByTagName('*');
-            for (let i = 0; i < allElements.length; i++) {
-              const element = allElements[i] as HTMLElement;
-              const style = window.getComputedStyle(element);
-              
-              // Force the resolved (computed) color onto the inline style.
-              // Browsers resolve oklch/oklab to rgb/rgba in computed styles.
-              // We only apply if it's not already an oklch/oklab string (safety check)
-              let resolvedColor = style.color;
-              let resolvedBg = style.backgroundColor;
-              let resolvedBorder = style.borderColor;
+          if (!el) return;
 
-              // If the browser still returns oklch/oklab in computed styles, 
-              // we force a fallback to prevent html2canvas from crashing.
-              if (resolvedColor.includes('okl')) resolvedColor = '#0f172a';
-              if (resolvedBg.includes('okl')) resolvedBg = '#ffffff';
-              if (resolvedBorder.includes('okl')) resolvedBorder = '#e2e8f0';
+          // 1. Fix dimensions
+          el.style.height = 'auto';
+          el.style.width = '800px';
+          el.style.margin = '0';
+          el.style.padding = '40px';
 
-              element.style.color = resolvedColor;
-              if (resolvedBg !== 'transparent' && resolvedBg !== 'rgba(0, 0, 0, 0)') {
-                element.style.backgroundColor = resolvedBg;
-              }
-              element.style.borderColor = resolvedBorder;
-              
-              // Force standard hex/rgb for common Tailwind variables if they still exist
-              element.style.setProperty('--color-brand-600', '#4f46e5');
-              element.style.setProperty('--color-emerald-600', '#059669');
-              element.style.setProperty('--color-slate-900', '#0f172a');
+          // 2. Resolve ALL colors to RGB to prevent oklch/oklab errors
+          // We use a helper to convert any color string to RGB using a temporary canvas
+          const colorCanvas = clonedDoc.createElement('canvas');
+          colorCanvas.width = 1;
+          colorCanvas.height = 1;
+          const ctx = colorCanvas.getContext('2d');
+
+          const toRgb = (color: string) => {
+            if (!ctx || !color || color === 'transparent' || color.includes('rgba(0, 0, 0, 0)')) return color;
+            try {
+              ctx.fillStyle = color;
+              ctx.fillRect(0, 0, 1, 1);
+              const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+              return `rgba(${r}, ${g}, ${b}, ${a / 255})`;
+            } catch (e) {
+              return color;
             }
+          };
 
-            // Add a global style override as a secondary safety measure
-            const styleTag = clonedDoc.createElement('style');
-            styleTag.innerHTML = `
-              * {
-                -webkit-print-color-adjust: exact !important;
-                color-adjust: exact !important;
-              }
-              :root {
-                --color-brand-50: #eef2ff !important;
-                --color-brand-100: #e0e7ff !important;
-                --color-brand-200: #c7d2fe !important;
-                --color-brand-300: #a5b4fc !important;
-                --color-brand-400: #818cf8 !important;
-                --color-brand-500: #6366f1 !important;
-                --color-brand-600: #4f46e5 !important;
-                --color-brand-700: #4338ca !important;
-                --color-brand-800: #3730a3 !important;
-                --color-brand-900: #312e81 !important;
-                --color-emerald-50: #ecfdf5 !important;
-                --color-emerald-100: #d1fae5 !important;
-                --color-emerald-200: #a7f3d0 !important;
-                --color-emerald-300: #6ee7b7 !important;
-                --color-emerald-400: #34d399 !important;
-                --color-emerald-500: #10b981 !important;
-                --color-emerald-600: #059669 !important;
-                --color-emerald-700: #047857 !important;
-                --color-emerald-800: #065f46 !important;
-                --color-emerald-900: #064e3b !important;
-                --color-slate-50: #f8fafc !important;
-                --color-slate-100: #f1f5f9 !important;
-                --color-slate-200: #e2e8f0 !important;
-                --color-slate-300: #cbd5e1 !important;
-                --color-slate-400: #94a3b8 !important;
-                --color-slate-500: #64748b !important;
-                --color-slate-600: #475569 !important;
-                --color-slate-700: #334155 !important;
-                --color-slate-800: #1e293b !important;
-                --color-slate-900: #0f172a !important;
-              }
-              /* Force standard colors on common classes to avoid oklab/oklch parsing */
-              .text-brand-600 { color: #4f46e5 !important; }
-              .bg-brand-50 { background-color: #eef2ff !important; }
-              .bg-brand-100 { background-color: #e0e7ff !important; }
-              .bg-emerald-50 { background-color: #ecfdf5 !important; }
-              .text-emerald-600 { color: #059669 !important; }
-              .bg-slate-50 { background-color: #f8fafc !important; }
-              .border-slate-100 { border-color: #f1f5f9 !important; }
-              .border-slate-200 { border-color: #e2e8f0 !important; }
-              .text-slate-900 { color: #0f172a !important; }
-              .text-slate-500 { color: #64748b !important; }
-            `;
-            clonedDoc.head.appendChild(styleTag);
+          const allElements = el.getElementsByTagName('*');
+          for (let i = 0; i < allElements.length; i++) {
+            const element = allElements[i] as HTMLElement;
+            const style = window.getComputedStyle(element);
+            
+            // Capture computed styles before we strip the stylesheets
+            const color = toRgb(style.color);
+            const bg = toRgb(style.backgroundColor);
+            const borderTop = toRgb(style.borderTopColor);
+            const borderBottom = toRgb(style.borderBottomColor);
+            const borderLeft = toRgb(style.borderLeftColor);
+            const borderRight = toRgb(style.borderRightColor);
+
+            // Apply as inline styles (which html2canvas prefers and understands)
+            element.style.color = color;
+            if (bg !== 'transparent' && !bg.includes('rgba(0, 0, 0, 0)')) {
+              element.style.backgroundColor = bg;
+            }
+            element.style.borderTopColor = borderTop;
+            element.style.borderBottomColor = borderBottom;
+            element.style.borderLeftColor = borderLeft;
+            element.style.borderRightColor = borderRight;
+            
+            // Ensure visibility
+            element.style.visibility = 'visible';
+            element.style.opacity = '1';
           }
+
+          // 3. CRITICAL: Remove all style/link tags from the clone
+          // This prevents html2canvas from attempting to parse the Tailwind v4 CSS 
+          // which contains the oklch/oklab functions that cause the crash.
+          // We also remove any style attributes that might contain oklch/oklab
+          const styles = clonedDoc.getElementsByTagName('style');
+          const links = clonedDoc.getElementsByTagName('link');
+          while (styles[0]) styles[0].parentNode?.removeChild(styles[0]);
+          while (links[0]) links[0].parentNode?.removeChild(links[0]);
+
+          // Clean up any remaining oklch/oklab strings in inline styles
+          const all = clonedDoc.getElementsByTagName('*');
+          for (let i = 0; i < all.length; i++) {
+            const el = all[i] as HTMLElement;
+            if (el.style.cssText.includes('okl')) {
+              el.style.cssText = el.style.cssText.replace(/oklch\([^)]+\)/g, '#4f46e5').replace(/oklab\([^)]+\)/g, '#4f46e5');
+            }
+          }
+
+          // 4. Add a minimal, safe stylesheet for basic layout
+          const safeStyle = clonedDoc.createElement('style');
+          safeStyle.innerHTML = `
+            #course-form-print { font-family: sans-serif !important; background: white !important; }
+            table { width: 100% !important; border-collapse: collapse !important; }
+            th, td { padding: 12px !important; text-align: left !important; border-bottom: 1px solid #eee !important; }
+            .font-bold { font-weight: bold !important; }
+            .text-sm { font-size: 14px !important; }
+            .text-xs { font-size: 12px !important; }
+            .text-2xl { font-size: 24px !important; }
+            .text-xl { font-size: 20px !important; }
+          `;
+          clonedDoc.head.appendChild(safeStyle);
         }
       });
       
@@ -174,19 +167,14 @@ export const RegistrationView: React.FC<RegistrationViewProps> = ({ student, cou
       
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
       
-      const finalWidth = imgWidth * ratio;
-      const finalHeight = imgHeight * ratio;
-      
-      pdf.addImage(imgData, 'JPEG', 0, 0, finalWidth, finalHeight, undefined, 'FAST');
+      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width * ratio, canvas.height * ratio, undefined, 'FAST');
       pdf.save(`Course_Form_${student.name.replace(/\s+/g, '_')}_${activeRegistration?.session.replace(/\//g, '-')}.pdf`);
       toast.success("Course form downloaded successfully", { id: toastId });
     } catch (error) {
       console.error("PDF generation failed:", error);
-      toast.error("Failed to generate PDF. Try again or use the Print option.", { id: toastId });
+      toast.error("PDF generation failed. Please use the 'Print' button and select 'Save as PDF'.", { id: toastId });
     } finally {
       setLoading(false);
     }
@@ -247,23 +235,29 @@ export const RegistrationView: React.FC<RegistrationViewProps> = ({ student, cou
               </p>
             </div>
           </div>
-          {isApproved && (
-            <div className="flex gap-3">
-              <button 
-                onClick={() => window.print()}
-                className="bg-white/10 text-white px-4 py-3 rounded-xl font-bold hover:bg-white/20 transition-all flex items-center gap-2 border border-white/10"
-              >
-                <Printer size={18} /> Print
-              </button>
-              <button 
-                onClick={handleDownloadPDF}
-                disabled={loading}
-                className="bg-white text-emerald-600 px-6 py-3 rounded-xl font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 border border-emerald-100 disabled:opacity-50"
-              >
-                <Download size={18} /> Download PDF
-              </button>
-            </div>
-          )}
+          <div className="flex gap-3">
+            <button 
+              onClick={() => window.print()}
+              className={`px-4 py-3 rounded-xl font-bold transition-all flex items-center gap-2 border ${
+                isApproved 
+                  ? 'bg-emerald-600 text-white border-emerald-500 hover:bg-emerald-700' 
+                  : 'bg-brand-600 text-white border-brand-500 hover:bg-brand-700'
+              }`}
+            >
+              <Printer size={18} /> Print Form
+            </button>
+            <button 
+              onClick={handleDownloadPDF}
+              disabled={loading}
+              className={`px-6 py-3 rounded-xl font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 border disabled:opacity-50 ${
+                isApproved
+                  ? 'bg-white text-emerald-600 border-emerald-100'
+                  : 'bg-white text-brand-600 border-brand-100'
+              }`}
+            >
+              <Download size={18} /> {loading ? 'Generating...' : 'Download PDF'}
+            </button>
+          </div>
         </motion.div>
 
         {/* Registration Details (Course Form Style) */}
