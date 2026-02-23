@@ -49,7 +49,7 @@ export const validateRegistration = (
           const end2 = c2.schedule.endTime;
 
           if (start1 < end2 && start2 < end1) {
-            errors.push(`Schedule conflict between ${c1.code} and ${c2.code}.`);
+            warnings.push(`Potential schedule conflict between ${c1.code} and ${c2.code}.`);
           }
         }
       }

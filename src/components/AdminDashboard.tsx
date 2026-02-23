@@ -490,6 +490,49 @@ export const AdminDashboard: React.FC<{ userRole: string }> = ({ userRole }) => 
                 />
               </div>
 
+              <div className="space-y-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <h4 className="text-[10px] uppercase font-bold text-slate-400">Schedule Configuration</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400">Start Time</label>
+                    <input 
+                      type="time"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg outline-none"
+                      value={newCourse.schedule.startTime}
+                      onChange={(e) => setNewCourse({
+                        ...newCourse, 
+                        schedule: { ...newCourse.schedule, startTime: e.target.value }
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400">End Time</label>
+                    <input 
+                      type="time"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg outline-none"
+                      value={newCourse.schedule.endTime}
+                      onChange={(e) => setNewCourse({
+                        ...newCourse, 
+                        schedule: { ...newCourse.schedule, endTime: e.target.value }
+                      })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-400">Days (e.g. MTWTF)</label>
+                  <input 
+                    type="text"
+                    placeholder="M, W, F"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg outline-none"
+                    value={newCourse.schedule.days.join(', ')}
+                    onChange={(e) => setNewCourse({
+                      ...newCourse, 
+                      schedule: { ...newCourse.schedule, days: e.target.value.split(',').map(d => d.trim().toUpperCase()).filter(d => d) }
+                    })}
+                  />
+                </div>
+              </div>
+
               <div className="flex gap-3 pt-4">
                 <button 
                   onClick={() => setIsAddingCourse(false)}
