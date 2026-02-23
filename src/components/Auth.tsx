@@ -53,7 +53,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           maxCredits: 24,
           minCredits: 15,
           role: 'student',
-          status: 'pending_approval'
+          status: 'active'
         };
         await dbService.createStudent(newStudent);
         studentData = newStudent;
@@ -94,11 +94,11 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
             maxCredits: 24,
             minCredits: 15,
             role: 'student',
-            status: 'pending_approval'
+            status: 'active'
           };
           await dbService.createStudent(recoveredStudent);
           studentData = recoveredStudent;
-          toast.info("Profile recovered. Awaiting approval.");
+          toast.info("Profile recovered.");
         }
         
         onAuthSuccess(studentData);
@@ -118,7 +118,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           maxCredits: 24,
           minCredits: 15,
           role,
-          status: 'pending_approval'
+          status: 'active'
         };
         await dbService.createStudent(newStudent);
         onAuthSuccess(newStudent);

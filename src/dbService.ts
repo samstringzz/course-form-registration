@@ -38,7 +38,7 @@ export const dbService = {
       maxCredits: data.maxCredits || 24,
       minCredits: data.minCredits || 15,
       role: data.role || 'student',
-      status: data.status || 'pending_approval'
+      status: data.status || 'active'
     } as Student;
   },
 

@@ -100,30 +100,6 @@ export default function App() {
     );
   }
 
-  if (student.status === 'pending_approval') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <Toaster position="top-right" richColors />
-        <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 text-center space-y-6">
-          <div className="inline-flex p-4 bg-brand-50 text-brand-600 rounded-2xl">
-            <Clock size={48} />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900">Approval Pending</h2>
-          <p className="text-slate-500">
-            Your account ({student.email}) is currently awaiting approval from the system administrator. 
-            Please check back later.
-          </p>
-          <button 
-            onClick={handleLogout}
-            className="w-full py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-all"
-          >
-            Sign Out
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex flex-col">
       <Toaster position="top-right" richColors />
