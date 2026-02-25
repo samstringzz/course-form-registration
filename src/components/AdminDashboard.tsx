@@ -123,6 +123,23 @@ export const AdminDashboard: React.FC<{ userRole: string }> = ({ userRole }) => 
     }
   };
 
+  const handleBulkApprove = async () => {
+    if (pendingRegs.length === 0) return;
+    if (!window.confirm(`Are you sure you want to approve all ${pendingRegs.length} pending registrations?`)) return;
+    
+    setLoading(true);
+    try {
+      await dbService.bulkApproveRegistrations(pendingRegs);
+      toast.success(`Successfully approved ${pendingRegs.length} registrations`);
+      setPendingRegs([]);
+    } catch (error) {
+      console.error("Bulk approve error:", error);
+      toast.error("Bulk approval failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleUserAction = async (user: Student, status: 'active' | 'rejected') => {
     try {
       await dbService.updateUserStatus(user.id, status);
@@ -286,8 +303,20 @@ export const AdminDashboard: React.FC<{ userRole: string }> = ({ userRole }) => 
           </div>
         </div>
       ) : (
-        <div className="grid gap-4">
-          <AnimatePresence mode="popLayout">
+        <div className="space-y-4">
+          {pendingRegs.length > 0 && (
+            <div className="flex justify-end">
+              <button
+                onClick={handleBulkApprove}
+                disabled={loading}
+                className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all flex items-center gap-2"
+              >
+                <ClipboardCheck size={20} /> Bulk Approve All ({pendingRegs.length})
+              </button>
+            </div>
+          )}
+          <div className="grid gap-4">
+            <AnimatePresence mode="popLayout">
             {pendingRegs.length === 0 ? (
               <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
                 <ShieldCheck className="mx-auto text-slate-200 mb-4" size={48} />
@@ -342,7 +371,8 @@ export const AdminDashboard: React.FC<{ userRole: string }> = ({ userRole }) => 
             )}
           </AnimatePresence>
         </div>
-      )}
+      </div>
+    )}
 
       {/* Prerequisite Edit Modal */}
       <AnimatePresence>

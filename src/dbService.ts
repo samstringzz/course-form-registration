@@ -9,6 +9,7 @@ import {
   where,
   addDoc,
   deleteDoc,
+  writeBatch,
   serverTimestamp,
   increment
 } from 'firebase/firestore';
@@ -118,6 +119,29 @@ export const dbService = {
         });
       }
     }
+  },
+
+  async bulkApproveRegistrations(registrations: RegistrationRecord[]) {
+    const batch = writeBatch(db);
+    
+    for (const reg of registrations) {
+      const regRef = doc(db, 'registrations', reg.id);
+      batch.update(regRef, { status: 'approved' });
+
+      const studentRef = doc(db, 'students', reg.studentId);
+      batch.update(studentRef, {
+        currentRegistrations: reg.courseIds
+      });
+
+      for (const courseId of reg.courseIds) {
+        const courseRef = doc(db, 'courses', courseId);
+        batch.update(courseRef, {
+          enrolled: increment(1)
+        });
+      }
+    }
+
+    await batch.commit();
   },
 
   async getPendingUsers(): Promise<Student[]> {
